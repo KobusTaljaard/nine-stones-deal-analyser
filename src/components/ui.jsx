@@ -1,148 +1,162 @@
-import { C } from "../lib/calc.js";
+// ═══════════════════════════════════════════════════════════════
+// Shared UI primitives — Nine Stones Capital
+// Styling lives in index.css so the grid can be truly responsive.
+// ═══════════════════════════════════════════════════════════════
 
-export function Label({ children }) {
+export function Grid({ children, cols = 3 }) {
+  return <div className={cols === 2 ? "ns-grid-2" : "ns-grid"}>{children}</div>;
+}
+
+export function Card({ n, title, accent, wide, full, children }) {
+  const cls = ["ns-card", accent ? `accent-${accent}` : "", wide ? "ns-span-2" : "", full ? "ns-span-all" : ""]
+    .filter(Boolean).join(" ");
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.2px", textTransform: "uppercase", color: C.sub, marginBottom: 5 }}>
+    <div className={cls}>
+      {(n || title) && (
+        <div className="ns-card-head">
+          {n && <div className="ns-num">{n}</div>}
+          {title && <div className="ns-card-title">{title}</div>}
+        </div>
+      )}
       {children}
     </div>
   );
 }
 
+export function Note({ children }) {
+  return <div className="ns-card-note">{children}</div>;
+}
+
+export function Row({ l, v, sub, tone, strong, big }) {
+  return (
+    <div className="ns-row">
+      <div>
+        <div className={`ns-row-l${strong ? " strong" : ""}`}>{l}</div>
+        {sub && <div className="ns-row-sub">{sub}</div>}
+      </div>
+      <div className={`ns-row-v${big ? " big" : ""}${tone ? ` ${tone}` : ""}`}>{v}</div>
+    </div>
+  );
+}
+
+export function Hero({ label, value, sub, tone }) {
+  return (
+    <div className="ns-hero">
+      <div className="ns-hero-label">{label}</div>
+      <div className={`ns-hero-value${tone ? ` ${tone}` : ""}`}>{value}</div>
+      {sub && <div className="ns-hero-sub">{sub}</div>}
+    </div>
+  );
+}
+
+export function StickyMao({ label, value, sub, side }) {
+  return (
+    <div className="ns-sticky">
+      <div className="ns-sticky-inner">
+        <div>
+          <div className="ns-sticky-label">{label}</div>
+          <div className="ns-sticky-value">{value}</div>
+          {sub && <div className="ns-sticky-sub">{sub}</div>}
+        </div>
+        {side && (
+          <div className="ns-sticky-side">
+            <div className="ns-sticky-side-label">{side.label}</div>
+            <div className="ns-sticky-side-value" style={{ color: side.color || "#fff" }}>{side.value}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Label({ children }) {
+  return <span className="ns-label">{children}</span>;
+}
+
 export function NumInput({ label, value, onChange, step = 10000, prefix = "R", min, max }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div className="ns-field">
       <Label>{label}</Label>
-      <div style={{ display: "flex", alignItems: "center", background: "#141C2E", border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 13px" }}>
-        {prefix && <span style={{ color: C.sub, marginRight: 6, fontSize: 14, userSelect: "none" }}>{prefix}</span>}
+      <div className="ns-input-wrap">
+        {prefix && <span className="ns-prefix">{prefix}</span>}
         <input
+          className="ns-input"
           type="number"
           value={Number.isFinite(value) ? value : 0}
-          step={step}
-          min={min}
-          max={max}
+          step={step} min={min} max={max}
           onChange={(e) => {
             const v = e.target.value === "" ? 0 : +e.target.value;
             if (!Number.isFinite(v)) return;
             onChange(v);
           }}
-          style={{ background: "none", border: "none", outline: "none", color: C.text, fontSize: 16, fontWeight: 600, width: "100%", fontFamily: "inherit", fontVariantNumeric: "tabular-nums" }}
         />
       </div>
     </div>
   );
 }
 
-export function TextInput({ label, value, onChange, placeholder = "" }) {
+export function TextInput({ label, value, onChange, placeholder = "", type = "text" }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div className="ns-field">
       <Label>{label}</Label>
-      <div style={{ display: "flex", alignItems: "center", background: "#141C2E", border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 13px" }}>
+      <div className="ns-input-wrap">
         <input
-          type="text"
-          value={value}
+          className="ns-input text"
+          type={type}
+          value={value || ""}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          style={{ background: "none", border: "none", outline: "none", color: C.text, fontSize: 14, fontWeight: 500, width: "100%", fontFamily: "inherit" }}
         />
       </div>
     </div>
   );
+}
+
+export function Help({ children }) {
+  return <div className="ns-help">{children}</div>;
 }
 
 export function Slider({ label, value, onChange, min, max, step = 1, suffix = "%" }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+    <div className="ns-field">
+      <div className="ns-slider-head">
         <Label>{label}</Label>
-        <span style={{ fontSize: 13, fontWeight: 800, color: C.blueL, fontVariantNumeric: "tabular-nums" }}>{value}{suffix}</span>
+        <span className="ns-slider-val">{value}{suffix}</span>
       </div>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(+e.target.value)}
-        style={{ width: "100%", accentColor: C.blue, cursor: "pointer" }}
-      />
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.sub, marginTop: 2 }}>
-        <span>{min}{suffix}</span><span>{max}{suffix}</span>
-      </div>
-    </div>
-  );
-}
-
-export function Row({ l, v, sub, color, bold, sep = true }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: sep ? `1px solid ${C.border}` : "none" }}>
-      <div>
-        <div style={{ fontSize: 13, color: bold ? C.text : C.dim, fontWeight: bold ? 600 : 400 }}>{l}</div>
-        {sub && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{sub}</div>}
-      </div>
-      <div style={{ fontSize: bold ? 15 : 13, fontWeight: bold ? 700 : 500, color: color || C.text, fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{v}</div>
-    </div>
-  );
-}
-
-export function Card({ children, accent }) {
-  return (
-    <div style={{ background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 12, padding: 18, marginBottom: 14 }}>
-      {children}
-    </div>
-  );
-}
-
-export function Sec({ children }) {
-  return (
-    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: C.blueL, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
-      {children}
-    </div>
-  );
-}
-
-export function BigOffer({ label, value, color, sub }) {
-  return (
-    <div style={{ background: C.bg, border: `2px solid ${color || C.border}`, borderRadius: 12, padding: 18, marginTop: 12 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: C.sub, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 30, fontWeight: 900, color: color || C.text, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.5px" }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: C.sub, marginTop: 5 }}>{sub}</div>}
+      <input type="range" min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(+e.target.value)} />
+      <div className="ns-slider-ends"><span>{min}{suffix}</span><span>{max}{suffix}</span></div>
     </div>
   );
 }
 
 export function Toggle({ label, value, onChange }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+    <div className="ns-toggle">
       <Label>{label}</Label>
-      <div
-        onClick={() => onChange(!value)}
+      <button
+        type="button"
         role="switch"
-        aria-checked={value}
-        style={{ width: 42, height: 23, borderRadius: 12, background: value ? C.blue : C.border, position: "relative", cursor: "pointer", transition: "background .2s", flexShrink: 0 }}
+        aria-checked={!!value}
+        aria-label={label}
+        className={`ns-switch${value ? " on" : ""}`}
+        onClick={() => onChange(!value)}
       >
-        <div style={{ position: "absolute", top: 3, left: value ? 21 : 3, width: 17, height: 17, borderRadius: "50%", background: "#fff", transition: "left .2s" }} />
-      </div>
+        <span className="ns-switch-dot" />
+      </button>
     </div>
   );
 }
 
 export function SegButtons({ label, value, onChange, options }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <Label>{label}</Label>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+    <div className="ns-field">
+      {label && <Label>{label}</Label>}
+      <div className="ns-seg">
         {options.map((o) => (
-          <button
-            key={o.value}
-            onClick={() => onChange(o.value)}
-            style={{
-              padding: "7px 11px",
-              borderRadius: 7,
-              border: `1px solid ${value === o.value ? C.blue : C.border}`,
-              background: value === o.value ? "rgba(37,99,235,0.15)" : "#141C2E",
-              color: value === o.value ? C.blueL : C.dim,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
+          <button key={o.value} type="button"
+            className={`ns-seg-btn${value === o.value ? " on" : ""}`}
+            onClick={() => onChange(o.value)}>
             {o.label}
           </button>
         ))}
@@ -151,49 +165,51 @@ export function SegButtons({ label, value, onChange, options }) {
   );
 }
 
-export function ExitRow({ icon, label, value, color, note }) {
+export function Banner({ tone = "warn", children }) {
+  return <div className={`ns-banner ${tone}`}>{children}</div>;
+}
+
+export function Pill({ tone = "sage", children }) {
+  return <span className={`ns-pill ${tone}`}><span className="ns-dot" />{children}</span>;
+}
+
+export function Btn({ kind = "primary", onClick, disabled, children, style }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: C.bg, borderRadius: 8, marginBottom: 6 }}>
-      <div>
-        <div style={{ fontSize: 13, color: C.dim }}>{icon} {label}</div>
-        <div style={{ fontSize: 11, color: C.sub }}>{note}</div>
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 800, color, fontVariantNumeric: "tabular-nums" }}>{value}</div>
-    </div>
+    <button type="button" className={`ns-btn ns-btn-${kind}`} onClick={onClick} disabled={disabled} style={style}>
+      {children}
+    </button>
   );
 }
 
-export function InfoRow({ label, value, sub, color }) {
+export function Check({ checked, onChange, children }) {
   return (
-    <div style={{ padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ fontSize: 12, color: C.dim }}>{label}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: color || C.text, fontVariantNumeric: "tabular-nums", textAlign: "right", maxWidth: "55%" }}>{value || "—"}</div>
+    <label className="ns-check">
+      <input type="checkbox" checked={!!checked} onChange={(e) => onChange(e.target.checked)} />
+      <span>{children}</span>
+    </label>
+  );
+}
+
+export function Modal({ title, body, confirmLabel, confirmKind = "danger-solid", onConfirm, onCancel, confirmDisabled }) {
+  return (
+    <div className="ns-modal-back" onClick={onCancel}>
+      <div className="ns-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ns-modal-title">{title}</div>
+        <div className="ns-modal-body">{body}</div>
+        <div className="ns-modal-actions">
+          <Btn kind="ghost" onClick={onCancel}>Cancel</Btn>
+          <Btn kind={confirmKind} onClick={onConfirm} disabled={confirmDisabled}>{confirmLabel}</Btn>
+        </div>
       </div>
-      {sub && <div style={{ fontSize: 11, color: C.sub, marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
 
 export function RiskBadge({ level }) {
-  const config = {
-    low: { label: "LOW RISK — up to 90% MAO", color: C.green },
-    medium: { label: "MEDIUM RISK — use 80% MAO", color: C.amber },
-    high: { label: "HIGH RISK — max 70% MAO", color: C.red },
-  };
-  const { label, color } = config[level] || config.medium;
-  return (
-    <div style={{ background: C.bg, border: `2px solid ${color}`, borderRadius: 10, padding: "10px 14px", marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
-      <div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: "0.5px" }}>{label}</div>
-    </div>
-  );
-}
-
-export function WarningBanner({ children }) {
-  return (
-    <div style={{ background: "rgba(245,158,11,0.1)", border: `1px solid ${C.amber}`, borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 12.5, color: C.amber, lineHeight: 1.6, fontWeight: 600 }}>
-      {children}
-    </div>
-  );
+  const cfg = {
+    low: { label: "Low risk — up to 90% MAO", tone: "pos" },
+    medium: { label: "Medium risk — use 80% MAO", tone: "warn" },
+    high: { label: "High risk — max 70% MAO", tone: "neg" },
+  }[level] || { label: "Medium risk", tone: "warn" };
+  return <Pill tone={cfg.tone}>{cfg.label}</Pill>;
 }
