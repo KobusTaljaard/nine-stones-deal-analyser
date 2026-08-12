@@ -18,7 +18,20 @@ function timeAgo(iso) {
 function KanbanCard({ deal, onOpen }) {
   const inp = { ...defaultInputs(), ...(deal.inputs || {}) };
   const c = computeDeal(inp);
-  const mao = inp.preferredMethod === "isa" ? (c.isaViable ? c.isaMao : null) : c.cash;
+  const isIsa = inp.preferredMethod === "isa";
+
+  // A lead with no ARV yet produces a meaningless negative offer — the maths
+  // is just the minimum-profit floor with nothing to subtract it from. Say so
+  // plainly instead of showing a number that looks like a real figure.
+  const notValued = !(inp.arv > 0);
+  const raw = isIsa ? (c.isaViable ? c.isaMao : null) : c.cash;
+
+  let maoText, maoTone;
+  if (notValued) { maoText = "Not valued yet"; maoTone = "pending"; }
+  else if (raw === null) { maoText = "Not viable"; maoTone = "none"; }
+  else if (raw <= 0) { maoText = "No offer at these numbers"; maoTone = "none"; }
+  else { maoText = R(raw); maoTone = "ok"; }
+
   return (
     <div className={`ns-kcard ${inp.approved ? "approved" : "fresh"}`} onClick={() => onOpen(deal.id)}>
       <div>
@@ -27,8 +40,15 @@ function KanbanCard({ deal, onOpen }) {
       </div>
       <div className="ns-kcard-foot">
         <div>
-          <div className="ns-kcard-method">{methodLabel(inp.preferredMethod)} · MAO</div>
-          <div className="ns-kcard-mao">{mao === null ? "Not viable" : R(mao)}</div>
+          <div className="ns-kcard-method">
+            {notValued ? "Awaiting valuation" : `${methodLabel(inp.preferredMethod)} · MAO`}
+          </div>
+          <div className="ns-kcard-mao" style={maoTone === "ok" ? undefined : {
+            fontSize: 13, fontWeight: 700,
+            color: maoTone === "pending" ? "var(--muted)" : "var(--neg)",
+          }}>
+            {maoText}
+          </div>
         </div>
         <div className="ns-kcard-time">{timeAgo(deal.updated_at)}</div>
       </div>
