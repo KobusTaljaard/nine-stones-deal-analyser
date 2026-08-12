@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { propertyTypeConfig, OCCUPIER_TYPES, methodLabel } from "./calc.js";
+import { dealFilename } from "./contractFill.js";
 
 // jsPDF's built-in fonts use WinAnsi encoding — no typographic minus, no
 // en-dashes. Plain hyphens only, so every glyph renders.
@@ -208,6 +209,15 @@ export function downloadSummaryPdf(inp, c) {
     marginX, y
   );
 
-  const fileClient = (inp.clientName || "deal").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-  doc.save(`${fileClient}-summary.pdf`);
+  // Shares its naming core with the OTP documents:
+  //   DEAL SUMMARIZER-{Seller} - {street}, {suburb}.pdf
+  //   OTP-{Seller} - {street}, {suburb} - {Document}.pdf
+  const d = inp.doc || {};
+  const name = dealFilename(
+    "DEAL SUMMARIZER",
+    d.seller_name_1 || inp.clientName || "deal",
+    d.ls_street_no, d.ls_street_name,
+    d.ls_suburb || d.ls_city || ""
+  );
+  doc.save(`${name}.pdf`);
 }

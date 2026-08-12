@@ -9,14 +9,17 @@ import {
   Toggle, SegButtons, Banner, Pill, Btn, Check, Modal, RiskBadge, Label,
 } from "./ui.jsx";
 import NegotiationLog from "./NegotiationLog.jsx";
+import DocumentGenerator from "./DocumentGenerator.jsx";
 import { downloadSummaryPdf } from "../lib/pdf.js";
+import { seedDocFromDeal } from "../lib/docFields.js";
 
 function monthsLabel(m) {
   if (m === null || m === undefined || !isFinite(m)) return "—";
   return `Month ${Math.round(m)} · ${(m / 12).toFixed(1)} yrs`;
 }
 
-const TABS = ["Inputs", "Due Diligence", "Negotiation", "Cash Offer", "Installment", "Disposition", "Summary"];
+const TABS = ["Inputs", "Due Diligence", "Negotiation", "Cash Offer", "Installment", "Disposition", "Summary", "Documents"];
+const DOCS_TAB = 7;
 
 export default function DealCalculator({ dealId, onBack, onDeleted }) {
   const [tab, setTab] = useState(0);
@@ -65,6 +68,38 @@ export default function DealCalculator({ dealId, onBack, onDeleted }) {
 
   const set = (key) => (value) => setInp((prev) => ({ ...prev, [key]: value }));
   const c = useMemo(() => (inp ? computeDeal(inp) : null), [inp]);
+
+  // Document payload lives inside the same inputs JSON, so autosave and
+  // Hermes both reach it without a schema change.
+  const doc = (inp && inp.doc) || {};
+  const setDoc = (updater) => setInp((prev) => ({
+    ...prev,
+    doc: typeof updater === "function" ? updater(prev.doc || {}) : updater,
+  }));
+
+  // Seed the OTP fields the first time the Documents tab is opened.
+  useEffect(() => {
+    if (tab !== DOCS_TAB || !inp || !c) return;
+    if (inp.doc && Object.keys(inp.doc).length) return;
+    setInp((prev) => ({ ...prev, doc: seedDocFromDeal(prev, c) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, inp, c]);
+
+  // Headless surface for Hermes: window.NSC
+  useEffect(() => {
+    if (!inp || !c) return;
+    window.NSC = window.NSC || {};
+    Object.assign(window.NSC, {
+      dealId,
+      inputs: inp,
+      computed: c,
+      setInput: (k, v) => setInp((prev) => ({ ...prev, [k]: v })),
+      setInputs: (obj) => setInp((prev) => ({ ...prev, ...obj })),
+      goToTab: (i) => setTab(i),
+      tabs: TABS,
+    });
+    return () => { if (window.NSC) { delete window.NSC.inputs; delete window.NSC.computed; } };
+  }, [inp, c, dealId]);
 
   async function reallyDelete() {
     setDeleting(true);
@@ -130,6 +165,16 @@ export default function DealCalculator({ dealId, onBack, onDeleted }) {
         : "Rent cannot carry your minimum cash flow",
       side: { label: "Cash flow / mo", value: R(c.isaActualCashflow), color: c.isaActualCashflow >= (minCashflow || 0) ? C.pos : C.neg },
     };
+    if (tab === DOCS_TAB) {
+      const offer = preferredMethod === "isa" ? c.isaMao : c.cash;
+      const rounded = offer ? Math.round(offer / 5000) * 5000 : 0;
+      return {
+        label: `Offer Price On The Contract — ${methodLabel(preferredMethod)}`,
+        value: R(rounded),
+        sub: `Rounded to the nearest R5 000 from ${R(offer)}`,
+        side: { label: approved ? "Approved" : "Not approved", value: approved ? "✓" : "Check numbers first", color: approved ? C.pos : C.warn },
+      };
+    }
     const isIsa = preferredMethod === "isa";
     return {
       label: `Max Offer — ${methodLabel(preferredMethod)}`,
@@ -684,6 +729,25 @@ export default function DealCalculator({ dealId, onBack, onDeleted }) {
               )}
             </Card>
           </>}
+
+          {/* ═══ DOCUMENTS ════════════════════════════════════ */}
+          {tab === DOCS_TAB && (
+            <>
+              {!approved && (
+                <Banner tone="warn">
+                  This deal hasn't been approved yet. You can still generate, but the offer price comes straight off
+                  unconfirmed numbers — check the Summary tab first.
+                </Banner>
+              )}
+              <DocumentGenerator
+                inp={inp}
+                c={c}
+                doc={doc}
+                setDoc={setDoc}
+                onExposeApi={(api) => { window.NSC = Object.assign(window.NSC || {}, api); }}
+              />
+            </>
+          )}
         </div>
       </div>
 

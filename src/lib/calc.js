@@ -220,6 +220,9 @@ export function defaultInputs() {
     negotiationLog: [],
 
     summaryNotes: "",
+
+    // OTP document fields — seeded on first visit to the Documents tab.
+    doc: {},
   };
 }
 

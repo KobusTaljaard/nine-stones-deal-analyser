@@ -95,16 +95,17 @@ export function NumInput({ label, value, onChange, step = 10000, prefix = "R", m
   );
 }
 
-export function TextInput({ label, value, onChange, placeholder = "", type = "text" }) {
+export function TextInput({ label, value, onChange, placeholder = "", type = "text", readOnly }) {
   return (
     <div className="ns-field">
       <Label>{label}</Label>
-      <div className="ns-input-wrap">
+      <div className="ns-input-wrap" style={readOnly ? { opacity: .65 } : undefined}>
         <input
           className="ns-input text"
           type={type}
           value={value || ""}
           placeholder={placeholder}
+          readOnly={!!readOnly}
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
