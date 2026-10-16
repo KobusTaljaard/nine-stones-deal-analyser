@@ -101,6 +101,7 @@ export const DOC_SEED = {
   attorney_firm: "STBB — Lauren Sullivan",
   attorney_phone: "021 521 4000",
   attorney_email: "laurensu@stbb.co.za",
+  attorney_address: "24 Blaauwberg Road, Blouberg",
   bond_days: "14 business days",
   inspection_days: "21 business days",
   ls_sectional: "No",
@@ -159,6 +160,13 @@ export function todayPlus(days) {
   return d.toISOString().slice(0, 10);
 }
 
+// First Friday on or after (today + days). Same ISO yyyy-mm-dd format as todayPlus.
+export function fridayOnOrAfter(days) {
+  const d = new Date(todayPlus(days) + "T12:00:00Z"); // noon UTC: no timezone day-shift
+  d.setUTCDate(d.getUTCDate() + ((5 - d.getUTCDay() + 7) % 7));
+  return d.toISOString().slice(0, 10);
+}
+
 // Seed a fresh doc payload, pulling everything the analyser already knows.
 export function seedDocFromDeal(inp, c) {
   const isIsa = inp.preferredMethod === "isa";
@@ -172,6 +180,8 @@ export function seedDocFromDeal(inp, c) {
     ls_sectional: inp.propertyType === "sectional_title" ? "Yes" : "No",
     price_amount: price ? Math.round(price / 5000) * 5000 : "",
     offer_expiry: todayPlus(5),
+    transfer_date: fridayOnOrAfter(42), // 6 weeks from capture, then the next Friday
+    occupation_date: "On Transfer",
   };
   if (isIsa) {
     seed.interest_rate = String(inp.instRate ?? "");
