@@ -28,14 +28,14 @@ note = ParagraphStyle("note", fontName="Helvetica-Oblique", fontSize=8.5, leadin
 signnote = ParagraphStyle("signnote", fontName="Helvetica-Oblique", fontSize=9.5, leading=12, textColor=GREY)
 clause = ParagraphStyle("clause", fontName="Helvetica", fontSize=10.3, leading=13.6, textColor=INK,
                         alignment=TA_JUSTIFY, leftIndent=24, bulletIndent=0, bulletFontName="Helvetica-Bold",
-                        bulletFontSize=10.3, spaceAfter=6)
+                        bulletFontSize=10.3, spaceAfter=5)
 
 
 def field(canv, name, x, y, w, h, multiline=False, boxed=True, tip=""):
     """x, y are flowable-local; convert to absolute page coordinates."""
     ax, ay = canv.absolutePosition(x, y)
     kw = dict(name=name, tooltip=tip or name, x=ax, y=ay, width=w, height=h, fontName="Helvetica",
-              fontSize=10, textColor=Color(.03, .13, .28), value="")
+              fontSize=10, textColor=Color(.03, .13, .28), value="", maxlen=0)
     if boxed:
         kw.update(borderStyle="solid", borderWidth=0.6, borderColor=BORDER, fillColor=FILL, forceBorder=True)
     else:
@@ -122,17 +122,24 @@ class FinGrid(Flowable):
 
 
 class SignBlock(Flowable):
-    """One party section: header band, place/date line, two signature columns."""
-    def __init__(self, header, role, prefix):
-        super().__init__(); self.header, self.role, self.prefix = header, role, prefix
-    def wrap(self, aw, ah): return CW, 142
+    """One party section: coloured header band, the party's own place/date line, then
+    rows of two signature columns. rows = [((label, field), (label, field)), ...]."""
+    PLACE = 46      # band top -> place/date line
+    LABEL = 32      # place/date line -> first row label
+    SIG = 46        # row label -> signature line (room for a large signature)
+    NAME = 28       # signature line -> full-name line
+    ROWGAP = 30     # full-name line -> next row label
+    def __init__(self, header, prefix, rows, **spacing):
+        super().__init__(); self.header, self.prefix, self.rows = header, prefix, rows
+        for k, v in spacing.items(): setattr(self, k, v)
+        n = len(rows)
+        self.h = self.PLACE + self.LABEL + n * (self.SIG + self.NAME) + (n - 1) * self.ROWGAP + 12
+    def wrap(self, aw, ah): return CW, self.h
     def draw(self):
-        c = self.canv; top = 142
-        # header band
+        c = self.canv; top = self.h
         c.setFillColor(BAND); c.rect(0, top - 20, CW, 20, stroke=0, fill=1)
         c.setFillColor(INK); c.setFont("Helvetica-Bold", 10.5); c.drawString(8, top - 14, self.header)
-        # place & date
-        y = top - 44
+        y = top - self.PLACE
         c.setStrokeColor(INK); c.setLineWidth(0.7)
         pw, dx, dw = 300, 320, CW - 320
         c.line(0, y, pw, y); c.line(dx, y, dx + dw, y)
@@ -140,24 +147,27 @@ class SignBlock(Flowable):
         field(c, f"{self.prefix}_sign_date", dx, y + 1, dw, 16, boxed=False)
         c.setFont("Helvetica", 7.4); c.setFillColor(GREY)
         c.drawString(0, y - 9, "Signed at (place)"); c.drawString(dx, y - 9, "On (date)")
-        # two signatories
         colw = (CW - 30) / 2
-        for i in range(2):
-            x = i * (colw + 30)
-            c.setFillColor(INK); c.setFont("Helvetica-Bold", 9); c.drawString(x, top - 70, f"{self.role} {i + 1}")
-            ys = top - 100; yn = top - 132
-            c.setStrokeColor(INK); c.line(x, ys, x + colw, ys); c.line(x, yn, x + colw, yn)
-            field(c, f"{self.prefix}{i + 1}_name", x, yn + 1, colw, 14, boxed=False)
-            c.setFont("Helvetica", 7.4); c.setFillColor(GREY)
-            c.drawString(x, ys - 9, "Signature"); c.drawString(x, yn - 9, "Full name")
+        cur = y - self.LABEL
+        for row in self.rows:
+            ys = cur - self.SIG; yn = ys - self.NAME
+            for i, (label, fname) in enumerate(row):
+                x = i * (colw + 30)
+                c.setFillColor(INK); c.setFont("Helvetica-Bold", 9); c.drawString(x, cur, label)
+                c.setStrokeColor(INK); c.setLineWidth(0.7)
+                c.line(x, ys, x + colw, ys); c.line(x, yn, x + colw, yn)
+                field(c, fname, x, yn + 1, colw, 14, boxed=False)
+                c.setFont("Helvetica", 7.4); c.setFillColor(GREY)
+                c.drawString(x, ys - 9, "Signature"); c.drawString(x, yn - 9, "Full name")
+            cur = yn - self.ROWGAP
 
 
 class Doc(BaseDocTemplate):
     def __init__(self, path, footer, total, **kw):
-        super().__init__(path, pagesize=A4, leftMargin=LM, rightMargin=RM, topMargin=28, bottomMargin=90,
+        super().__init__(path, pagesize=A4, leftMargin=LM, rightMargin=RM, topMargin=28, bottomMargin=84,
                          title=footer, author="Nine Stones Capital (Pty) Ltd", **kw)
         self.footer, self.total = footer, total
-        frame = Frame(LM, 90, CW, H - 118, id="f", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+        frame = Frame(LM, 84, CW, H - 112, id="f", leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
         self.addPageTemplates([PageTemplate(id="p", frames=[frame], onPage=self.deco)])
     def deco(self, c, d):
         n = c.getPageNumber()
@@ -191,11 +201,11 @@ def story(spec):
          Spacer(1, 12), Heading("2.  " + spec["s2"]), Spacer(1, 8)]
     for num, head, text in spec["clauses"]:
         s.append(Paragraph(f"<b>{head}</b> {text}", clause, bulletText=num))
-    s += [Spacer(1, 6), KeepTogether([
+    s += [Spacer(1, 2), KeepTogether([
         Heading("3.  SIGNATURES"), Spacer(1, 6),
         Paragraph("Signed by hand in black ink, as part of and together with the Deed of Sale.", signnote),
-        Spacer(1, 10), SignBlock("SELLER(S)", "Seller", "seller"),
-        Spacer(1, 14), SignBlock("BUYER(S)", "Buyer", "buyer")])]
+        Spacer(1, 6), SignBlock("SELLER(S)", "seller", [(("Seller 1", "seller1_name"), ("Seller 2", "seller2_name"))]),
+        Spacer(1, 10), SignBlock("BUYER(S)", "buyer", [(("Buyer 1", "buyer1_name"), ("Buyer 2", "buyer2_name"))])])]
     return s
 
 
@@ -219,7 +229,7 @@ A = dict(
     intro="This Addendum sets out the extra terms for the sale agreement between",
     rest="where the Seller finances the purchase on the terms below. The Deed of Sale (signed on the date below) "
          "records the purchase price in clause 1.3; that price, less any deposit or extra cash the Buyer pays on or "
-         "before transfer, is the loan amount, which the Buyer binds himself to repay to the Seller on the terms in "
+         "before transfer, is the loan amount, which the Buyer binds itself to repay to the Seller on the terms in "
          "this Addendum. Where this Addendum and the Deed of Sale differ, this Addendum applies; and on transfer the "
          "mortgage bond in clause 2.2 (the kustingsbrief) is registered against the property in the Seller’s favour, "
          "together with the transfer.",
@@ -245,7 +255,7 @@ B = dict(
     intro="This Addendum amends the sale agreement between",
     rest="converting it into a sale on instalments. The Deed of Sale (signed on the date below) records the purchase "
          "price in clause 1.3; that price, less any deposit or extra cash the Buyer pays on or before occupation, is "
-         "the balance the Buyer binds himself to pay to the Seller by instalments, with interest, on the terms below. "
+         "the balance the Buyer binds itself to pay to the Seller by instalments, with interest, on the terms below. "
          "Where this Addendum and the Deed of Sale differ, this Addendum applies; and ownership passes to the Buyer "
          "only once the price and interest are paid in full, when transfer is registered and this recorded contract "
          "is cancelled.",

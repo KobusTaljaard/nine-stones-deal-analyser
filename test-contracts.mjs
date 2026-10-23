@@ -55,6 +55,10 @@ for (const [name, fn, file] of jobs) {
   fs.writeFileSync(`/tmp/out_${name}.pdf`, out);
   const head = Buffer.from(out.slice(0,5)).toString();
   ok(`${name} fills and saves`, head === "%PDF-" && out.length > 5000, `(${out.length} bytes)`);
+  const f = (await PDFLib.PDFDocument.load(out)).getForm();
+  ok(`${name} buyer signatory on signature page`, f.getTextField("buyer1_name").getText() === "JJ Taljaard, duly authorised");
+  ok(`${name} seller place left blank`, !f.getTextField("seller_sign_place").getText());
+  ok(`${name} buyer place filled`, f.getTextField("buyer_sign_place").getText() === "Mokopane");
 }
 console.log(`\n${fails===0 ? "ALL CHECKS PASSED" : fails+" FAILED"}`);
 process.exit(fails?1:0);

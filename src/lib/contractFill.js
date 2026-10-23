@@ -105,6 +105,7 @@ async function fillAcroForm(PDFLib, templateBytes, mapping) {
   const pdf = await PDFLib.PDFDocument.load(templateBytes);
   const form = pdf.getForm();
   const FIXED = { special_conditions: 10, property_excluded: 10, special: 10 };
+  SIG_KEYS.forEach((k) => { FIXED[k] = 10; });
   for (const name in mapping) {
     let val = mapping[name];
     if (val === null || val === undefined) val = "";
@@ -141,8 +142,24 @@ async function fillAddendum(PDFLib, templateBytes, mapping) {
   return await pdf.save();
 }
 
+const joinNames = (a, b) => [a, b].map((x) => (x || "").toString().trim()).filter(Boolean).join(" and ");
+
+// Signature page (deed v1.04+, addenda v1.02+). Place/date: buyer section only —
+// the seller's place and date are left blank for the seller to complete.
+// The buyer's full name is the person signing (e.g. "JJ Taljaard, duly authorised").
+export function signatureMapping(d) {
+  return {
+    buyer_sign_place: d.sign_place, buyer_sign_date: d.sign_date,
+    seller1_name: d.seller_name_1, seller2_name: d.seller_name_2,
+    buyer1_name: d.buyer_signatory
+      || (/nine stones/i.test(d.buyer_name_1 || "") ? "JJ Taljaard, duly authorised" : d.buyer_name_1), buyer2_name: d.buyer_name_2,
+  };
+}
+const SIG_KEYS = ["buyer_sign_place", "buyer_sign_date", "seller1_name", "seller2_name", "buyer1_name", "buyer2_name"];
+
 export function deedMapping(d) {
   return {
+    ...signatureMapping(d),
     seller_name_1: d.seller_name_1, seller_id_1: d.seller_id_1, seller_marital_1: d.seller_marital_1,
     seller_address_1: d.seller_address_1, seller_email_1: d.seller_email_1, seller_cell_1: d.seller_cell_1,
     seller_name_2: d.seller_name_2, seller_id_2: d.seller_id_2, seller_marital_2: d.seller_marital_2,
@@ -167,10 +184,7 @@ export function deedMapping(d) {
   };
 }
 
-const joinNames = (a, b) => [a, b].map((x) => (x || "").toString().trim()).filter(Boolean).join(" and ");
-
-// Field map for both addenda. Signing place/date: buyer section only —
-// the seller's place and date are left blank for the seller to complete.
+// Field map for both addenda.
 export function addendumMapping(d) {
   return {
     seller_name: joinNames(d.seller_name_1, d.seller_name_2),
@@ -180,9 +194,7 @@ export function addendumMapping(d) {
     interest_rate: pctWords(d.interest_rate), loan_period: monthsWords(d.loan_period),
     instalment: rand(d.instalment), first_instal: d.first_instal,
     balloon_amt: d.balloon_amt ? rand(d.balloon_amt) : "", balloon_date: d.balloon_date,
-    buyer_sign_place: d.sign_place, buyer_sign_date: d.sign_date,
-    seller1_name: d.seller_name_1, seller2_name: d.seller_name_2,
-    buyer1_name: d.buyer_name_1, buyer2_name: d.buyer_name_2,
+    ...signatureMapping(d),
   };
 }
 export const addAMapping = addendumMapping; // back-compat alias

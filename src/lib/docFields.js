@@ -44,6 +44,7 @@ export const DOC_SECTIONS = [
       ["buyer_email_1", "Buyer email", "text"],
       ["buyer_cell_1", "Buyer cellphone", "text"],
       ["buyer_tax", "Buyer tax number", "text"],
+      ["buyer_signatory", "Signs for the buyer (name on signature page)", "text"],
     ],
   },
   {
@@ -100,6 +101,7 @@ export const DOC_SEED = {
   buyer_address_1: "13 Mont Blanc Street, Somerset West, 7130",
   buyer_marital_1: "N/A",
   buyer_tax: "9341489178",
+  buyer_signatory: "JJ Taljaard, duly authorised",
   attorney_firm: "STBB — Lauren Sullivan",
   attorney_phone: "021 521 4000",
   attorney_email: "laurensu@stbb.co.za",
