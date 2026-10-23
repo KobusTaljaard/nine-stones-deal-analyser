@@ -162,7 +162,7 @@ Stored under `inputs.doc`. Keys are **stable** — never rename them.
 
 **Sellers** — `seller_name_1`\*, `seller_id_1`†, `seller_marital_1`†, `seller_address_1`, `seller_cell_1`, `seller_email_1`, `seller_name_2`, `seller_id_2`, `seller_marital_2`
 
-**Buyer** — `buyer_name_1`\*, `buyer_id_1`†, `buyer_address_1`†, `buyer_email_1`, `buyer_cell_1`, `buyer_tax` *(pre-seeded with Nine Stones' details)*
+**Buyer** — `buyer_name_1`\*, `buyer_id_1`†, `buyer_marital_1`, `buyer_address_1`†, `buyer_email_1`, `buyer_cell_1`, `buyer_tax` *(pre-seeded with Nine Stones' details)*
 
 **Attorney** — `attorney_firm`†, `attorney_phone`, `attorney_email`, `attorney_address` *(pre-seeded with STBB)*
 

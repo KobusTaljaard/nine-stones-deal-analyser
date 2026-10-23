@@ -39,6 +39,7 @@ export const DOC_SECTIONS = [
     id: "buyers", n: "03", title: "Buyer — Nine Stones", fields: [
       ["buyer_name_1", "Buyer full name", "text", { req: ["deed", "A", "B"] }],
       ["buyer_id_1", "Buyer registration no.", "text", { req: ["deed"] }],
+      ["buyer_marital_1", "Buyer marital status (N/A for a company)", "text"],
       ["buyer_address_1", "Buyer address", "text", { req: ["deed"] }],
       ["buyer_email_1", "Buyer email", "text"],
       ["buyer_cell_1", "Buyer cellphone", "text"],
@@ -97,6 +98,7 @@ export const DOC_SEED = {
   buyer_email_1: "kobus@webuysahomes.co.za",
   buyer_cell_1: "083 232 7597",
   buyer_address_1: "13 Mont Blanc Street, Somerset West, 7130",
+  buyer_marital_1: "N/A",
   buyer_tax: "9341489178",
   attorney_firm: "STBB — Lauren Sullivan",
   attorney_phone: "021 521 4000",
