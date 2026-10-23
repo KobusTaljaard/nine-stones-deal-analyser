@@ -86,35 +86,6 @@ export function monthsWords(v) {
   return m + " months";
 }
 
-// Addendum B has no AcroForm — values are drawn at fixed coordinates.
-export const ADDB_BOXES = [
-  { p: 0, x: 330, top: 80.2, size: 9, key: "seller_name_1" },
-  { p: 0, x: 50, top: 98.2, size: 9, key: "buyer_name_1" },
-  { p: 0, x: 275, top: 98.2, size: 9, key: "property_address" },
-  { p: 0, x: 382, top: 116.2, size: 9, key: "dos_date" },
-  { p: 0, x: 48, top: 292, size: 9, key: "finance_amount", fmt: "rand" },
-  { p: 0, x: 190, top: 292, size: 7.5, key: "finance_words" },
-  { p: 0, x: 48, top: 336, size: 9, key: "interest_rate", fmt: "pct" },
-  { p: 0, x: 221, top: 336, size: 9, key: "loan_period", fmt: "months" },
-  { p: 0, x: 394, top: 336, size: 9, key: "instalment", fmt: "rand" },
-  { p: 0, x: 48, top: 380, size: 9, key: "first_instal" },
-  { p: 0, x: 221, top: 380, size: 9, key: "balloon_amt", fmt: "rand" },
-  { p: 0, x: 394, top: 380, size: 9, key: "balloon_date" },
-  { p: 1, x: 50, top: 444, size: 9, key: "sign_place" },
-  { p: 1, x: 282, top: 444, size: 9, key: "sign_date" },
-  { p: 1, x: 45, top: 546, size: 8, key: "seller_name_1" },
-  { p: 1, x: 174, top: 546, size: 8, key: "seller_name_2" },
-  { p: 1, x: 304, top: 546, size: 8, key: "buyer_name_1" },
-  { p: 1, x: 433, top: 546, size: 8, key: "buyer_name_2" },
-];
-
-function fmtValue(fmt, v) {
-  if (fmt === "rand") return rand(v);
-  if (fmt === "pct") return pctWords(v);
-  if (fmt === "months") return monthsWords(v);
-  return (v === null || v === undefined) ? "" : String(v);
-}
-
 export function derive(d) {
   const o = { ...d };
   const price = toNum(o.price_amount);
@@ -147,6 +118,29 @@ async function fillAcroForm(PDFLib, templateBytes, mapping) {
   return await pdf.save();
 }
 
+// Addenda A & B (v1.02+) share one AcroForm layout and field names.
+// Text is set at a fixed 10pt so amounts never shrink or grow; a single-line
+// value that is wider than its box (long "amount in words") steps down to fit.
+async function fillAddendum(PDFLib, templateBytes, mapping) {
+  const pdf = await PDFLib.PDFDocument.load(templateBytes);
+  const form = pdf.getForm();
+  const font = await pdf.embedFont(PDFLib.StandardFonts.Helvetica);
+  for (const name in mapping) {
+    const val = mapping[name] === null || mapping[name] === undefined ? "" : String(mapping[name]);
+    let f;
+    try { f = form.getTextField(name); } catch { continue; /* field not on this template */ }
+    f.setText(val);
+    let size = 10;
+    if (val && !f.isMultiline()) {
+      const box = f.acroField.getWidgets()[0].getRectangle().width - 6;
+      while (size > 7 && font.widthOfTextAtSize(val, size) > box) size -= 0.5;
+    }
+    f.setFontSize(size);
+  }
+  form.updateFieldAppearances(font);
+  return await pdf.save();
+}
+
 export function deedMapping(d) {
   return {
     seller_name_1: d.seller_name_1, seller_id_1: d.seller_id_1, seller_marital_1: d.seller_marital_1,
@@ -173,36 +167,34 @@ export function deedMapping(d) {
   };
 }
 
-export function addAMapping(d) {
+const joinNames = (a, b) => [a, b].map((x) => (x || "").toString().trim()).filter(Boolean).join(" and ");
+
+// Field map for both addenda. Signing place/date: buyer section only —
+// the seller's place and date are left blank for the seller to complete.
+export function addendumMapping(d) {
   return {
-    seller_name: d.seller_name_1, buyer_name: d.buyer_name_1, property_desc: d.property_address,
+    seller_name: joinNames(d.seller_name_1, d.seller_name_2),
+    buyer_name: joinNames(d.buyer_name_1, d.buyer_name_2),
+    property_desc: d.property_address,
     dos_date: d.dos_date, loan_amount: rand(d.finance_amount), amount_words: d.finance_words,
     interest_rate: pctWords(d.interest_rate), loan_period: monthsWords(d.loan_period),
     instalment: rand(d.instalment), first_instal: d.first_instal,
     balloon_amt: d.balloon_amt ? rand(d.balloon_amt) : "", balloon_date: d.balloon_date,
+    buyer_sign_place: d.sign_place, buyer_sign_date: d.sign_date,
+    seller1_name: d.seller_name_1, seller2_name: d.seller_name_2,
+    buyer1_name: d.buyer_name_1, buyer2_name: d.buyer_name_2,
   };
 }
+export const addAMapping = addendumMapping; // back-compat alias
 
 export async function fillDeed(PDFLib, bytes, deal) {
   return fillAcroForm(PDFLib, bytes, deedMapping(derive(deal)));
 }
 export async function fillAddA(PDFLib, bytes, deal) {
-  return fillAcroForm(PDFLib, bytes, addAMapping(derive(deal)));
+  return fillAddendum(PDFLib, bytes, addendumMapping(derive(deal)));
 }
-export async function fillAddB(PDFLib, bytes, dealRaw) {
-  const d = derive(dealRaw);
-  const pdf = await PDFLib.PDFDocument.load(bytes);
-  const font = await pdf.embedFont(PDFLib.StandardFonts.Helvetica);
-  const pages = pdf.getPages();
-  for (const b of ADDB_BOXES) {
-    const raw = d[b.key];
-    const txt = b.fmt ? fmtValue(b.fmt, raw) : (raw === null || raw === undefined ? "" : String(raw));
-    if (!txt) continue;
-    const page = pages[b.p];
-    const h = page.getHeight();
-    page.drawText(txt, { x: b.x, y: h - b.top, size: b.size, font, color: PDFLib.rgb(0.03, 0.13, 0.28) });
-  }
-  return await pdf.save();
+export async function fillAddB(PDFLib, bytes, deal) {
+  return fillAddendum(PDFLib, bytes, addendumMapping(derive(deal)));
 }
 
 // ── Shared filename rule ──────────────────────────────────────
