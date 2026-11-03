@@ -107,7 +107,7 @@ export const DOC_SEED = {
   attorney_email: "laurensu@stbb.co.za",
   attorney_address: "24 Blaauwberg Road, Blouberg",
   bond_days: "14 business days",
-  inspection_days: "21 business days",
+  inspection_days: "14 business days",
   ls_sectional: "No",
 };
 
